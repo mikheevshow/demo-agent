@@ -1,7 +1,10 @@
+import importlib.util
+import sys
+import inspect
+
 from openai import OpenAI
 
-from models import ToolSchema
-
+from models import ToolSchema, BaseTool
 
 TOOL_CREATOR_SYSTEM_PROMPT = """
 You are the tool creator - a module of AI agentic framework for tool creation. Here is the base class located at 
@@ -36,6 +39,7 @@ FOLLOW INSTRUCTIONS STRICTLY:
 - Generated class should implement required methods and set required properties in the `init` method. Fill `id`, `name`, `description`, these parameters should be imagined by you
 - Don't rewrite the BaseTool class implementation, just add its path in the import
 - Don't imagine non-existent classes or libraries
+- Don't pass any parameters to `__init__`, only `def __init__(self)`
 - Include proper type hints for all methods and parameters
 - Add comprehensive docstrings for the class and methods
 - Implement proper error handling for invalid inputs
@@ -142,9 +146,27 @@ class ToolCreator:
         return code_for_refinement
 
     @staticmethod
-    def save_code_to_file(code: str, file_path: str):
-        if not str(file_path).endswith(".py"):
+    def save_code_to_file(code: str, python_tool_file_path: str):
+        if not str(python_tool_file_path).endswith(".py"):
             raise ValueError("file_path must end with .py")
-        with open(file_path, "w", encoding="utf-8") as file:
+        with open(python_tool_file_path, "w", encoding="utf-8") as file:
             file.write(code)
+
+    @staticmethod
+    def get_tool_instance(python_tool_file_path: str) -> BaseTool:
+
+        module_name = "dynamic_module"
+        spec = importlib.util.spec_from_file_location(module_name, python_tool_file_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+
+        classes = [
+            name for name, obj in inspect.getmembers(module, inspect.isclass)
+            if obj.__module__ == module_name
+        ]
+
+        ToolClass = getattr(module, classes[0])
+
+        return ToolClass()
 

@@ -4,8 +4,9 @@ dotenv.load_dotenv()
 
 import openai
 
+from tool_registry import ToolRegistry
 from tool_creator import ToolCreator
-from schema_planner import SchemaPlanner
+from schema_planner import AgentSchemaPlanner
 
 
 if __name__ == "__main__":
@@ -27,8 +28,9 @@ if __name__ == "__main__":
 
     client = openai.OpenAI()
 
-    schema_planner = SchemaPlanner(client=client, model="gpt-4o-mini")
+    schema_planner = AgentSchemaPlanner(client=client, model="gpt-4o-mini")
     tool_creator = ToolCreator(client=client, model="gpt-4o-mini")
+    tool_registry = ToolRegistry()
 
 
     agent_plan = schema_planner.plan(task)
@@ -38,7 +40,6 @@ if __name__ == "__main__":
     print("********************************************")
 
     planned_tools = agent_plan.tools
-
 
     for tool_schema in planned_tools:
 
@@ -55,4 +56,18 @@ if __name__ == "__main__":
             return text
 
         file_name = prepare_filename(tool_schema.name)
-        tool_creator.save_code_to_file(tool_code, file_path=f"./generated_{file_name}.py")
+
+        import os
+        os.makedirs("./generated_tools", exist_ok=True)
+
+        tool_filepath = f"./generated_tools/generated_{file_name}.py"
+
+        tool_creator.save_code_to_file(tool_code, python_tool_file_path=tool_filepath)
+
+        tool_instance = tool_creator.get_tool_instance(python_tool_file_path=tool_filepath)
+
+        tool_registry.register(tool=tool_instance)
+
+    print("************** TOOLS ***************")
+    print(tool_registry.list_tools())
+    print("*************************************")

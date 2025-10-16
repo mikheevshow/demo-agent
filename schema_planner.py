@@ -17,7 +17,7 @@ USER TASK:
 
 """
 
-class SchemaPlanner:
+class AgentSchemaPlanner:
 
     def __init__(self, client: OpenAI, model: str):
         self.client = client
