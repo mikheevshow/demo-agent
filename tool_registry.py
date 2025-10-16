@@ -1,5 +1,4 @@
 from models import BaseTool
-from typing import Any
 
 class ToolRegistry:
     def __init__(self):

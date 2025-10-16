@@ -1,5 +1,7 @@
 import dotenv
 
+from models import BaseTool
+
 dotenv.load_dotenv()
 
 import openai
@@ -43,8 +45,6 @@ if __name__ == "__main__":
 
     for tool_schema in planned_tools:
 
-        tool_code = tool_creator.generate_tool_code(tool_schema=tool_schema, task=task)
-
         def prepare_filename(text: str) -> str:
             def split_upper_camel_case(text: str) -> str:
                 import re
@@ -62,9 +62,11 @@ if __name__ == "__main__":
 
         tool_filepath = f"./generated_tools/generated_{file_name}.py"
 
+        tool_code: str = tool_creator.generate_tool_code(tool_schema=tool_schema, task=task)
+
         tool_creator.save_code_to_file(tool_code, python_tool_file_path=tool_filepath)
 
-        tool_instance = tool_creator.get_tool_instance(python_tool_file_path=tool_filepath)
+        tool_instance: BaseTool = tool_creator.get_tool_instance(python_tool_file_path=tool_filepath)
 
         tool_registry.register(tool=tool_instance)
 
