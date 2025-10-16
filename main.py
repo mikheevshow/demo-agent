@@ -6,6 +6,7 @@ dotenv.load_dotenv()
 
 import openai
 
+from tool_file_utils import (format_generated_tool_filename, create_generated_tools_directory)
 from tool_registry import ToolRegistry
 from tool_creator import ToolCreator
 from schema_planner import AgentSchemaPlanner
@@ -45,22 +46,9 @@ if __name__ == "__main__":
 
     for tool_schema in planned_tools:
 
-        def prepare_filename(text: str) -> str:
-            def split_upper_camel_case(text: str) -> str:
-                import re
-                return re.sub(r'(?<!^)(?=[A-Z])', ' ', text)
-            text = split_upper_camel_case(text)
-            text = text.replace(" ", "_")
-            text = text.replace("__", "_")
-            text = text.lower()
-            return text
-
-        file_name = prepare_filename(tool_schema.name)
-
-        import os
-        os.makedirs("./generated_tools", exist_ok=True)
-
-        tool_filepath = f"./generated_tools/generated_{file_name}.py"
+        tools_directory = create_generated_tools_directory()
+        tool_file_name = format_generated_tool_filename(tool_schema.name)
+        tool_filepath = f"{tools_directory}/{tool_file_name}"
 
         tool_code: str = tool_creator.generate_tool_code(tool_schema=tool_schema, task=task)
 
