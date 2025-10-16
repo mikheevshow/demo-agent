@@ -62,6 +62,31 @@ INITIAL USER TASK:
 
 """
 
+TOOL_REFINEMENT_SYSTEM_PROMPT = """
+
+You are a code refinement module in an AI agent framework. Review the Python code below and ensure that it behaves 
+as described. Verify that the implementation fully meets the specified requirements.
+
+FOLLOW INSTRUCTIONS STRICTLY:
+- Ensure all required imports are added
+- Generate ONLY code in code-quotas
+
+"""
+
+TOOL_REFINEMENT_USER_PROMPT = """
+
+TOOL SCHEMA:
+
+{tool_schema}
+
+TOOL CODE:
+
+```python
+{code}
+```
+
+"""
+
 class ToolCreator:
     def __init__(self, client: OpenAI, model: str):
         self.client = client
@@ -82,9 +107,39 @@ class ToolCreator:
             ]
         )
 
-        print(response)
+        code = response.output_text.split("```python")[1].split("```")[0]
 
-        return response.output_text.split("```python")[1].split("```")[0]
+        refined_code = self._run_refinement_loop(tool_schema, code)
+
+        return refined_code
+
+
+    def _run_refinement_loop(self,
+                             tool_schema: ToolSchema,
+                             code: str,
+                             refinement_count: int = 1) -> str:
+
+        code_for_refinement = code
+
+        for _ in range(refinement_count):
+            response = self.client.responses.parse(
+                model=self.model,
+                input=[
+                    {
+                        "role": "system",
+                        "content": TOOL_REFINEMENT_SYSTEM_PROMPT
+                    },
+                    {
+                        "role": "user",
+                        "content": TOOL_REFINEMENT_USER_PROMPT.format(tool_schema=tool_schema.model_dump_json(),
+                                                                      code=code_for_refinement),
+                    }
+                ]
+            )
+
+            code_for_refinement = response.output_text.split("```python")[1].split("```")[0]
+
+        return code_for_refinement
 
     @staticmethod
     def save_code_to_file(code: str, file_path: str):
